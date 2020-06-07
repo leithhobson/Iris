@@ -1,5 +1,6 @@
 
 import React from 'react';
+import Icon from '../Icon';
 
 export default class TextField extends React.Component {
   constructor(props) {
@@ -7,7 +8,8 @@ export default class TextField extends React.Component {
 
     this.state = {
       in_focus: false,
-      value: (this.props.value ? this.props.value : ''),
+      value: props.value || '',
+      saved: false,
     };
   }
 
@@ -20,32 +22,44 @@ export default class TextField extends React.Component {
     return null;
   }
 
-  handleChange(e) {
+  handleChange = (e) => {
     this.setState({ value: e.target.value });
   }
 
-  handleFocus(e) {
-    this.setState({ in_focus: true });
+  handleFocus = () => {
+    this.setState({ in_focus: true, saved: false, });
   }
 
-  handleBlur(e) {
+  handleBlur = () => {
+    const { value, onChange, autosave } = this.props;
+    const { value: stateValue } = this.state;
     this.setState({ in_focus: false });
-    if (this.state.value !== this.props.value) {
-      this.props.onChange(this.state.value);
+    if (stateValue !== value) {
+      onChange(stateValue);
+      if (autosave) this.setState({ saved: true });
     }
   }
 
-  render() {
+  render = () => {
+    const {
+      className,
+      type = 'text',
+      placeholder,
+    } = this.props;
+    const { value, saved } = this.state;
+
     return (
-      <input
-        className={this.props.className ? this.props.className : ''}
-        type={this.props.type ? this.props.type : 'text'}
-        onChange={(e) => this.handleChange(e)}
-        onFocus={(e) => this.handleFocus(e)}
-        onBlur={(e) => this.handleBlur(e)}
-        value={this.state.value}
-        placeholder={this.props.placeholder ? this.props.placeholder : null}
-      />
+      <div className={`text-field__wrapper ${className}`}>
+        <input
+          type={type}
+          onChange={this.handleChange}
+          onFocus={this.handleFocus}
+          onBlur={this.handleBlur}
+          value={value}
+          placeholder={placeholder}
+        />
+        {saved && <Icon name="check" className="text-field__saved" />}
+      </div>
     );
   }
 }

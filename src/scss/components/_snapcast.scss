@@ -13,7 +13,7 @@
 		color: colour(white);
 		background: transparent;
 
-		.light-theme & {
+		@include theme('light') {
 			color: colour(darkest_grey);
 		}
 	}
@@ -32,6 +32,12 @@
 				width: 12.5%;
 				min-width: 110px;
 				max-width: 140px;
+
+				&--no-clients {
+					.menu-item__inner > * {
+						opacity: 0.5 !important;
+					}
+				}
 
 				&__inner {
 					padding: 20px 10px;
@@ -67,9 +73,9 @@
 					}
 				}
 
-				.light-theme & {
-					.menu-item__inner {
-						&:hover{
+				@include theme('light') {
+					&:hover{
+						.menu-item__inner {
 							background: darken(colour(faint_grey), 8%);
 						}
 
@@ -103,7 +109,7 @@
 			font-size: 1rem;
 		}
 
-		.light-theme & {
+		@include theme('light') {
 			background: darken(colour(faint_grey), 8%);
 		}
 

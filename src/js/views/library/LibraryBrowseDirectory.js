@@ -11,6 +11,7 @@ import DropdownField from '../../components/Fields/DropdownField';
 import Icon from '../../components/Icon';
 import URILink from '../../components/URILink';
 import ErrorBoundary from '../../components/ErrorBoundary';
+import LazyLoadListener from '../../components/LazyLoadListener';
 import * as uiActions from '../../services/ui/actions';
 import * as mopidyActions from '../../services/mopidy/actions';
 import * as spotifyActions from '../../services/spotify/actions';
@@ -20,7 +21,25 @@ import {
 import { arrayOf, sortItems } from '../../util/arrays';
 
 class LibraryBrowseDirectory extends React.Component {
+  constructor(props) {
+    super(props);
+
+    this.state = {
+      filter: '',
+      limit: 50,
+      per_page: 50,
+    };
+  }
+
   componentDidMount() {
+    // Restore any limit defined in our location state
+    const state = (this.props.location.state ? this.props.location.state : {});
+    if (state.limit) {
+      this.setState({
+        limit: state.limit,
+      });
+    }
+
     this.props.uiActions.setWindowTitle('Browse');
     this.loadDirectory();
   }
@@ -48,6 +67,17 @@ class LibraryBrowseDirectory extends React.Component {
     }
   }
 
+  loadMore() {
+    const new_limit = this.state.limit + this.state.per_page;
+
+    this.setState({ limit: new_limit });
+
+    // Set our pagination to location state
+    const state = (this.props.location && this.props.location.state ? this.props.location.state : {});
+    state.limit = new_limit;
+    this.props.history.replace({ state });
+  }
+
   playAll(e, tracks) {
     const tracks_uris = arrayOf('uri', tracks);
     this.props.mopidyActions.playURIs(tracks_uris, `iris:browse:${this.props.uri}`);
@@ -67,29 +97,14 @@ class LibraryBrowseDirectory extends React.Component {
     }
 
     if (parent_uri.startsWith('file://')) {
-      const uri = parent_uri.replace('file:///', '');
-      const uri_elements = uri.split('/');
+      parent_uri = parent_uri.substring(0, parent_uri.lastIndexOf('/'));
 
       return (
         <h4 className="breadcrumbs">
-          {uri_elements.map((uri_element, index) => {
-            // Reconstruct a URL to this element
-            let uri = 'file://';
-            for (let i = 0; i <= index; i++) {
-              uri += `/${uri_elements[i]}`;
-            }
-
-            return (
-              <span key={uri}>
-                {index > 0 && (
-                  <Icon type="fontawesome" name="angle-right" />
-                )}
-                <URILink type="browse" uri={uri}>
-                  {decodeURI(uri_element)}
-                </URILink>
-              </span>
-            );
-          })}
+          <Icon type="fontawesome" name="angle-left" />
+          <URILink type="browse" uri={parent_uri}>
+            {decodeURI(parent_uri)}
+          </URILink>
         </h4>
       );
     }
@@ -98,7 +113,7 @@ class LibraryBrowseDirectory extends React.Component {
   }
 
   renderSubdirectories(subdirectories) {
-    if (this.props.view == 'list') {
+    if (this.props.view === 'list') {
       return (
         <List
           nocontext
@@ -115,7 +130,7 @@ class LibraryBrowseDirectory extends React.Component {
           subdirectories.map((subdirectory) => (
             <GridItem
               key={subdirectory.uri}
-              type="browse"
+              type="directory"
               link={`/library/browse/${encodeURIComponent(subdirectory.uri)}`}
               item={subdirectory}
               nocontext
@@ -126,28 +141,50 @@ class LibraryBrowseDirectory extends React.Component {
     );
   }
 
-  render() {
-    let title = 'Directory';
-    const uri_exploded = this.props.uri.split(':');
-    if (uri_exploded.length > 0) {
-      title = uri_exploded[0];
-      title = title.charAt(0).toUpperCase() + title.slice(1);
-    }
+  render = () => {
+    const {
+      uri,
+      directory,
+      load_queue,
+      uiActions,
+      view,
+    } = this.props;
+    const { limit } = this.state;
 
-    if (!this.props.directory || isLoading(this.props.load_queue, ['mopidy_browse'])) {
+    let title = 'Directory';
+
+    if (!directory || isLoading(load_queue, ['mopidy_browse'])) {
       return (
         <div className="view library-local-view">
-          <Header icon="music" title={title} uiActions={this.props.uiActions} />
+          <Header icon="music" title={title} uiActions={uiActions} />
           <Loader body loading />
         </div>
       );
     }
 
-    let tracks = (this.props.directory.tracks && this.props.directory.tracks.length > 0 ? this.props.directory.tracks : null);
-    tracks = sortItems(tracks, 'name');
+    if (directory.name) {
+      title = directory.name;
+    } else {
+      const uri_exploded = uri.split(':');
+      if (uri_exploded.length > 0) {
+        title = uri_exploded[0];
+        title = title.charAt(0).toUpperCase() + title.slice(1);
+      }
+    };
 
-    let subdirectories = (this.props.directory.subdirectories && this.props.directory.subdirectories.length > 0 ? this.props.directory.subdirectories : null);
+    let subdirectories = (directory.subdirectories && directory.subdirectories.length > 0 ? directory.subdirectories : null);
     subdirectories = sortItems(subdirectories, 'name');
+
+    const total_items = (tracks ? tracks.length : 0) + (subdirectories ? subdirectories.length : 0);
+    subdirectories = subdirectories.slice(0, this.state.limit);
+    let all_tracks = null;
+    let tracks = null;
+    let limit_remaining = this.state.limit - subdirectories;
+    if (limit_remaining > 0) {
+      all_tracks = (directory.tracks && directory.tracks.length > 0 ? directory.tracks : null);
+      all_tracks = sortItems(all_tracks, 'name');
+      tracks = all_tracks.slice(0, limit_remaining);
+    }
 
     const view_options = [
       {
@@ -165,18 +202,18 @@ class LibraryBrowseDirectory extends React.Component {
         <DropdownField
           icon="visibility"
           name="View"
-          value={this.props.view}
+          value={view}
           valueAsLabel
           options={view_options}
-          handleChange={(value) => { this.props.uiActions.set({ library_directory_view: value }); this.props.uiActions.hideContextMenu(); }}
+          handleChange={(value) => { uiActions.set({ library_directory_view: value }); uiActions.hideContextMenu(); }}
         />
         {tracks && (
-          <a className="button button--no-hover" onClick={(e) => { this.props.uiActions.hideContextMenu(); this.playAll(e, tracks); }}>
+          <a className="button button--no-hover" onClick={(e) => { uiActions.hideContextMenu(); this.playAll(e, all_tracks); }}>
             <Icon name="play_circle_filled" />
             Play all
           </a>
         )}
-        <a className="button button--no-hover" onClick={(e) => { this.props.uiActions.hideContextMenu(); this.goBack(e); }}>
+        <a className="button button--no-hover" onClick={(e) => { uiActions.hideContextMenu(); this.goBack(e); }}>
           <Icon name="keyboard_backspace" />
           Back
         </a>
@@ -185,7 +222,7 @@ class LibraryBrowseDirectory extends React.Component {
 
     return (
       <div className="view library-local-view">
-        <Header options={options} uiActions={this.props.uiActions}>
+        <Header options={options} uiActions={uiActions}>
           <Icon name="folder" type="material" />
           {title}
         </Header>
@@ -198,11 +235,17 @@ class LibraryBrowseDirectory extends React.Component {
 
             {tracks && (
               <TrackList
-                tracks={this.props.directory.tracks}
-                uri={`iris:browse:${this.props.uri}`}
+                tracks={tracks}
+                uri={`iris:browse:${uri}`}
                 className="library-local-track-list"
               />
             )}
+
+            <LazyLoadListener
+              loadKey={total_items > limit ? limit : total_items}
+              showLoader={limit < total_items}
+              loadMore={() => this.loadMore()}
+            />
 
           </ErrorBoundary>
         </section>

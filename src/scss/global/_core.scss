@@ -78,14 +78,14 @@ body {
   height: 100%;
   position: relative;
 
-  &.light-theme {
-    color: colour(darkest_grey);
-    background: colour(faint_grey);
-  }
-
-  &.dark-theme {
+  @include theme('dark', true) {
     color: colour(light_grey);
     background: colour(dark_grey);
+  }
+
+  @include theme('light', true) {
+    color: colour(darkest_grey);
+    background: colour(faint_grey);
   }
 }
 
@@ -93,7 +93,7 @@ main {
   position: absolute;
   top: 0;
   left: 0;
-  bottom: 60px;
+  bottom: 50px;
   right: 0;
   padding-left: 220px;
   perspective: 1000px;
@@ -144,7 +144,7 @@ main {
     }
   }
 
-  .notouch.light-theme & {
+  .notouch & {
     &::-webkit-scrollbar-track {
       background: colour(white);
     }
@@ -215,6 +215,11 @@ main {
     color: colour(white);
     white-space: pre-wrap;
     word-wrap: break-word;
+
+    @include theme('light') {
+      background: rgba(128, 128, 128, 0.25);
+      color: colour(dark_grey);
+    }
   }
 }
 
@@ -227,7 +232,7 @@ h1 {
   color: colour(white);
   display: flex;
 
-  .light-theme & {
+  @include theme('light') {
     color: colour(darkest_grey);
   }
 }
@@ -322,8 +327,8 @@ p {
   height: 0px !important;
   position: fixed !important;
   z-index: -99 !important;
-  top: -99px !important;
-  left: -99px !important;
+  top: -9999px !important;
+  left: -9999px !important;
 }
 
 .no-results {
@@ -593,6 +598,10 @@ footer {
   &--dark {
     background: lighten(colour(dark_grey), 10%);
     color: colour(mid_grey);
+
+    @include theme('light') {
+      background: lighten(colour(mid_grey), 25%);
+    }
   }
 
   &--large {

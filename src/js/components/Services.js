@@ -7,6 +7,7 @@ import Link from './Link';
 import Thumbnail from './Thumbnail';
 import Icon from './Icon';
 import URILink from './URILink';
+import TextField from './Fields/TextField';
 import SpotifyAuthenticationFrame from './Fields/SpotifyAuthenticationFrame';
 import LastfmAuthenticationFrame from './Fields/LastfmAuthenticationFrame';
 import GeniusAuthenticationFrame from './Fields/GeniusAuthenticationFrame';
@@ -67,7 +68,14 @@ class Services extends React.Component {
   }
 
   renderSpotify() {
-    const user_object = (this.props.spotify.me && this.props.core.users[this.props.spotify.me.uri] ? this.props.core.users[this.props.spotify.me.uri] : null);
+    const {
+      core,
+      spotify,
+      mopidy,
+      spotifyActions,
+    } = this.props;
+    const { country, locale } = this.state;
+    const user_object = (spotify.me && core.users[spotify.me.uri] ?core.users[spotify.me.uri] : null);
     if (user_object) {
       var user = (
         <URILink className="user" type="user" uri={user_object.uri}>
@@ -91,7 +99,7 @@ class Services extends React.Component {
 
     let not_installed = null;
 
-    if (!this.props.mopidy.uri_schemes || !this.props.mopidy.uri_schemes.includes('spotify:')) {
+    if (!mopidy.uri_schemes || !mopidy.uri_schemes.includes('spotify:')) {
       not_installed = (
         <div>
           <p className="message warning">
@@ -109,12 +117,10 @@ class Services extends React.Component {
         <label className="field">
           <div className="name">Country</div>
           <div className="input">
-            <input
-              type="text"
-              onChange={(e) => this.setState({ country: e.target.value })}
-              onFocus={(e) => this.setState({ input_in_focus: 'country' })}
-              onBlur={(e) => this.props.spotifyActions.set({ country: e.target.value })}
-              value={this.state.country}
+            <TextField
+              onChange={(value) => spotifyActions.set({ country: value })}
+              value={country}
+              autosave
             />
             <div className="description">
               {'An '}
@@ -128,12 +134,10 @@ class Services extends React.Component {
         <label className="field">
           <div className="name">Locale</div>
           <div className="input">
-            <input
-              type="text"
-              onChange={(e) => this.setState({ locale: e.target.value })}
-              onFocus={(e) => this.setState({ input_in_focus: 'locale' })}
-              onBlur={(e) => this.props.spotifyActions.set({ locale: e.target.value })}
-              value={this.state.locale}
+            <TextField
+              onChange={(value) => spotifyActions.set({ locale: value })}
+              value={locale}
+              autosave
             />
             <div className="description">
               {'Lowercase '}
@@ -160,12 +164,12 @@ class Services extends React.Component {
           <div className="name">Authorization</div>
           <div className="input">
             <SpotifyAuthenticationFrame />
-            {this.props.spotify.refreshing_token ? (
+            {spotify.refreshing_token ? (
               <a className="button button--default button--working">Force token refres</a>
             ) : (
               <a
                 className="button button--default"
-                onClick={(e) => this.props.spotifyActions.refreshingToken()}
+                onClick={() => spotifyActions.refreshingToken()}
               >
                 Force token refresh
               </a>
@@ -267,6 +271,7 @@ class Services extends React.Component {
   }
 
   renderIcecast() {
+    const { core, coreActions } = this.props;
     return (
       <div>
         <div className="field checkbox">
@@ -276,8 +281,8 @@ class Services extends React.Component {
               <input
                 type="checkbox"
                 name="ssl"
-                checked={this.props.core.http_streaming_enabled}
-                onChange={(e) => this.props.coreActions.set({ http_streaming_enabled: !this.props.core.http_streaming_enabled })}
+                checked={core.http_streaming_enabled}
+                onChange={() => coreActions.set({ http_streaming_enabled: !core.http_streaming_enabled })}
               />
               <span className="label">
 								Stream audio to this browser
@@ -288,10 +293,10 @@ class Services extends React.Component {
         <label className="field">
           <div className="name">Location</div>
           <div className="input">
-            <input
-              type="text"
-              onChange={(e) => this.props.coreActions.set({ http_streaming_url: e.target.value })}
-              value={this.props.core.http_streaming_url}
+            <TextField
+              onChange={(value) => coreActions.set({ http_streaming_url: value })}
+              value={core.http_streaming_url}
+              autosave
             />
             <div className="description">
 							The full URL to your stream endpoint
@@ -322,9 +327,9 @@ class Services extends React.Component {
     }
 
     return (
-      <div className="menu" id="services-menu">
+      <div className="sub-tabs__menu menu" id="services-menu">
         <div className="menu__inner">
-          <Link history={this.props.history} className="menu-item menu-item--spotify" activeClassName="menu-item--active" to="/settings/spotify" scrollTo="#services-menu">
+          <Link history={this.props.history} className="menu-item menu-item--spotify" activeClassName="menu-item--active" to="/settings/services/spotify" scrollTo="#services-menu">
             <div className="menu-item__inner">
               {spotify_icon}
               <div className="menu-item__title">
@@ -333,7 +338,7 @@ class Services extends React.Component {
               {this.props.spotify.authorization ? <span className="status green-text">Authorized</span> : <span className="status mid_grey-text">Read-only</span>}
             </div>
           </Link>
-          <Link history={this.props.history} className="menu-item menu-item--lastfm" activeClassName="menu-item--active" to="/settings/lastfm" scrollTo="#services-menu">
+          <Link history={this.props.history} className="menu-item menu-item--lastfm" activeClassName="menu-item--active" to="/settings/services/lastfm" scrollTo="#services-menu">
             <div className="menu-item__inner">
               {lastfm_icon}
               <div className="menu-item__title">
@@ -342,7 +347,7 @@ class Services extends React.Component {
               {this.props.lastfm.authorization ? <span className="status green-text">Authorized</span> : <span className="status mid_grey-text">Read-only</span>}
             </div>
           </Link>
-          <Link history={this.props.history} className="menu-item menu-item--genius" activeClassName="menu-item--active" to="/settings/genius" scrollTo="#services-menu">
+          <Link history={this.props.history} className="menu-item menu-item--genius" activeClassName="menu-item--active" to="/settings/services/genius" scrollTo="#services-menu">
             <div className="menu-item__inner">
               {genius_icon}
               <div className="menu-item__title">
@@ -351,7 +356,7 @@ class Services extends React.Component {
               {this.props.genius.authorization ? <span className="status green-text">Authorized</span> : <span className="status mid_grey-text">Unauthorized</span>}
             </div>
           </Link>
-          <Link history={this.props.history} className="menu-item menu-item--snapcast" activeClassName="menu-item--active" to="/settings/snapcast" scrollTo="#services-menu">
+          <Link history={this.props.history} className="menu-item menu-item--snapcast" activeClassName="menu-item--active" to="/settings/services/snapcast" scrollTo="#services-menu">
             <div className="menu-item__inner">
               <Icon className="menu-item__icon" name="devices" />
               <div className="menu-item__title">
@@ -368,7 +373,7 @@ class Services extends React.Component {
               )}
             </div>
           </Link>
-          <Link history={this.props.history} className="menu-item menu-item--icecast" activeClassName="menu-item--active" to="/settings/icecast" scrollTo="#services-menu">
+          <Link history={this.props.history} className="menu-item menu-item--icecast" activeClassName="menu-item--active" to="/settings/services/icecast" scrollTo="#services-menu">
             <div className="menu-item__inner">
               <Icon className="menu-item__icon" name="wifi_tethering" />
               <div className="menu-item__title">
@@ -386,15 +391,15 @@ class Services extends React.Component {
     const { match } = this.props;
     switch (match.params.service) {
       case 'spotify':
-        return <div className="service">{this.renderSpotify()}</div>;
+        return <div className="sub-tabs__content">{this.renderSpotify()}</div>;
       case 'lastfm':
-        return <div className="service">{this.renderLastfm()}</div>;
+        return <div className="sub-tabs__content">{this.renderLastfm()}</div>;
       case 'genius':
-        return <div className="service">{this.renderGenius()}</div>;
+        return <div className="sub-tabs__content">{this.renderGenius()}</div>;
       case 'icecast':
-        return <div className="service">{this.renderIcecast()}</div>;
+        return <div className="sub-tabs__content">{this.renderIcecast()}</div>;
       case 'snapcast':
-        return <div className="service">{<Snapcast match={this.props.match} />}</div>;
+        return <div className="sub-tabs__content">{<Snapcast match={this.props.match} />}</div>;
       default:
         return null;
     }
@@ -402,7 +407,7 @@ class Services extends React.Component {
 
   render() {
     return (
-      <div className="services">
+      <div className="sub-tabs sub-tabs--services">
         {this.renderMenu()}
         {this.renderService()}
       </div>

@@ -25,6 +25,7 @@ import {
   getFromUri,
   isLoading,
   sourceIcon,
+  decodeMopidyUri,
 } from '../util/helpers';
 import { collate } from '../util/format';
 
@@ -63,7 +64,7 @@ class Playlist extends React.Component {
         push,
       },
     } = this.props;
-  
+
     if (prevPlaylist && playlist && prevPlaylist.moved_to !== playlist.moved_to) {
       push(`/playlist/${encodeURIComponent(playlist.moved_to)}`);
     }
@@ -72,7 +73,7 @@ class Playlist extends React.Component {
       loadPlaylist(uri);
     } else if (!prev_mopidy_connected && mopidy_connected) {
       if (uriSource(uri) !== 'spotify') {
-        loadPlaylist(nextProps.uri);
+        loadPlaylist(uri);
       }
     }
 
@@ -219,10 +220,8 @@ Could not find playlist with URI "
     return (
       <div className="view playlist-view content-wrapper preserve-3d">
 
-        <Parallax image={playlist.images ? playlist.images.huge : null} blur />
-
         <div className="thumbnail-wrapper">
-          <Thumbnail size="large" glow canZoom images={playlist.images} />
+          <Thumbnail size="large" glow canZoom images={playlist.images} type="playlist" />
         </div>
 
         <div className="title">
@@ -277,31 +276,45 @@ Edited
 }
 
 const mapStateToProps = (state, ownProps) => {
-  // Decode the URI, and then re-encode selected characters
-  // This is needed as Mopidy encodes *some* characters in playlist URIs (but not other characters)
-  // We need to retain ":" because this a reserved URI separator
-  let uri = decodeURIComponent(ownProps.match.params.uri);
-  uri = uri.replace(/\s/g, '%20');	// space
-  uri = uri.replace(/\[/g, '%5B');	// [
-  uri = uri.replace(/\]/g, '%5D');	// ]
-  uri = uri.replace(/\(/g, '%28');	// (
-  uri = uri.replace(/\)/g, '%29');	// )
-  uri = uri.replace(/\#/g, '%23');	// #
+  const {
+    ui: {
+      allow_reporting,
+      slim_mode,
+      theme,
+      load_queue,
+    } = {},
+    core: {
+      users,
+      tracks,
+      playlists,
+    } = {},
+    spotify: {
+      library_playlists: spotify_library_playlists,
+      authorization: spotify_authorized,
+      me = {},
+    } = {},
+    mopidy: {
+      connected: mopidy_connected,
+      library_playlists: local_library_playlists,
+    } = {},
+  } = state;
+
+  const uri = decodeMopidyUri(ownProps.match.params.uri);
 
   return {
     uri,
-    allow_reporting: state.ui.allow_reporting,
-    slim_mode: state.ui.slim_mode,
-    theme: state.ui.theme,
-    load_queue: state.ui.load_queue,
-    users: state.core.users,
-    tracks: state.core.tracks,
-    playlist: (state.core.playlists[uri] !== undefined ? state.core.playlists[uri] : false),
-    spotify_library_playlists: state.spotify.library_playlists,
-    local_library_playlists: state.mopidy.library_playlists,
-    mopidy_connected: state.mopidy.connected,
-    spotify_authorized: state.spotify.authorization,
-    spotify_userid: (state.spotify.me && state.spotify.me.id ? state.spotify.me.id : null),
+    allow_reporting,
+    slim_mode,
+    theme,
+    load_queue,
+    users,
+    tracks,
+    playlist: (playlists[uri] !== undefined ? playlists[uri] : false),
+    spotify_library_playlists,
+    local_library_playlists,
+    mopidy_connected,
+    spotify_authorized,
+    spotify_userid: (me && me.id) || null,
   };
 };
 

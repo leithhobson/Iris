@@ -1,6 +1,5 @@
 
 import { createStore, applyMiddleware, combineReducers } from 'redux';
-
 import thunk from 'redux-thunk';
 
 import { generateGuid } from '../util/helpers';
@@ -44,7 +43,7 @@ let state = {
     http_streaming_url: `http://${window.location.hostname}:8000/mopidy`,
   },
   ui: {
-    theme: 'dark',
+    theme: 'auto',
     smooth_scrolling_enabled: true,
     hotkeys_enabled: true,
     playback_controls_touch_enabled: true,
@@ -60,7 +59,17 @@ let state = {
     connected: false,
     host: window.location.hostname,
     port: (window.location.port ? window.location.port : (window.location.protocol === 'https:' ? '443' : '80')),
-    ssl: (window.location.protocol === 'https:'),
+    ssl: window.location.protocol === 'https:',
+    current_server: 'default',
+    servers: {
+      default: {
+        id: 'default',
+        name: 'Default',
+        host: window.location.hostname,
+        port: (window.location.port ? window.location.port : (window.location.protocol === 'https:' ? '443' : '80')),
+        ssl: window.location.protocol === 'https:',
+      },
+    },
     mute: false,
     volume: 0,
     progress: 0,

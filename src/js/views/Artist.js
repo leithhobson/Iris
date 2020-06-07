@@ -52,7 +52,7 @@ class Artist extends React.Component {
         loadArtist,
       },
     } = this.props;
-  
+
     if (uri !== prevUri) {
       loadArtist(uri);
     } else if (!prev_mopidy_connected && mopidy_connected) {
@@ -117,6 +117,7 @@ class Artist extends React.Component {
   }
 
   renderOverview() {
+    const { uiActions } = this.props;
     const artist = collate(
       this.props.artist,
       {
@@ -193,8 +194,19 @@ class Artist extends React.Component {
         {artist.related_artists && artist.related_artists.length > 0 && (
           <div className="col col--w25 related-artists">
             <h4>Related artists</h4>
-            <div className="list-wrapper"><RelatedArtists artists={artist.related_artists.slice(0, 6)} /></div>
-            <Link to={`/artist/${encodeURIComponent(this.props.uri)}/related-artists`} scrollTo="#sub-views-menu" className="button button--default">All related artists</Link>
+            <div className="list-wrapper">
+              <RelatedArtists
+                artists={artist.related_artists.slice(0, 6)}
+                uiActions={uiActions}
+              />
+            </div>
+            <Link
+              to={`/artist/${encodeURIComponent(this.props.uri)}/related-artists`}
+              scrollTo="#sub-views-menu"
+              className="button button--default"
+            >
+              All related artists
+            </Link>
           </div>
         )}
 
@@ -407,7 +419,7 @@ class Artist extends React.Component {
             <div className="heading">
 
               <div className="heading__thumbnail">
-                <Thumbnail size="medium" circle canZoom image={image} />
+                <Thumbnail size="medium" circle canZoom type="artist" image={image} />
               </div>
 
               <div className="heading__content">

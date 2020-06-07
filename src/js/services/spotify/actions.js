@@ -442,7 +442,7 @@ export function getCategory(id) {
             type: 'SPOTIFY_CATEGORY_LOADED',
             category: {
               uri: `category:${response.id}`,
-              playlist_uris: [],
+              playlist_uris: null,
               ...response,
             },
           });
@@ -1415,7 +1415,7 @@ export function createPlaylist(name, description, is_public, is_collaborative) {
             uris: [response.uri],
           });
 
-          dispatch(uiActions.createNotification({ level: 'warning', content: 'Created playlist' }));
+          dispatch(uiActions.createNotification({ content: 'Created playlist' }));
         },
         (error) => {
           dispatch(coreActions.handleException(

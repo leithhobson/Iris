@@ -15,7 +15,7 @@ const SnapcastClients = ({ actions, group, groups, show_disconnected_clients }) 
   }
 
   if (!clients || clients.length <= 0) {
-    return <p className="no-results">No clients</p>;
+    return <p className="no-results">No connected clients</p>;
   }
 
   return (
@@ -40,6 +40,7 @@ const SnapcastClients = ({ actions, group, groups, show_disconnected_clients }) 
                   <TextField
                     onChange={(value) => actions.setClientName(client.id, value)}
                     value={client.name}
+                    autosave
                   />
                 </div>
               </label>
@@ -63,6 +64,7 @@ const SnapcastClients = ({ actions, group, groups, show_disconnected_clients }) 
                         label: '+ New group',
                       },
                     ]}
+                    autosave
                   />
                 </div>
               </label>
@@ -81,6 +83,7 @@ const SnapcastClients = ({ actions, group, groups, show_disconnected_clients }) 
                     type="number"
                     onChange={(value) => actions.setClientLatency(client.id, parseInt(value))}
                     value={String(client.latency)}
+                    autosave
                   />
                 </div>
               </div>

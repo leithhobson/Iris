@@ -3,6 +3,7 @@ import { bindActionCreators } from 'redux';
 import { Route, Switch } from 'react-router-dom';
 import { connect } from 'react-redux';
 import ReactGA from 'react-ga';
+import * as Sentry from '@sentry/browser';
 
 import Sidebar from './components/Sidebar';
 import PlaybackControls from './components/PlaybackControls';
@@ -13,6 +14,7 @@ import ResizeListener from './components/ResizeListener';
 import Hotkeys from './components/Hotkeys';
 import DebugInfo from './components/DebugInfo';
 import ErrorMessage from './components/ErrorMessage';
+import Stream from './components/Stream';
 
 import Album from './views/Album';
 import Artist from './views/Artist';
@@ -50,6 +52,7 @@ import ImageZoom from './views/modals/ImageZoom';
 import EditCommand from './views/modals/EditCommand';
 
 import { scrollTo, isTouchDevice } from './util/helpers';
+import storage from './util/storage';
 import * as coreActions from './services/core/actions';
 import * as uiActions from './services/ui/actions';
 import * as pusherActions from './services/pusher/actions';
@@ -62,6 +65,27 @@ import * as snapcastActions from './services/snapcast/actions';
 export class App extends React.Component {
   constructor(props) {
     super(props);
+
+    // Load query param settings
+    const configs = ['ui', 'spotify', 'pusher', 'snapcast', 'mopidy', 'google', 'lastfm', 'genius']
+    const params = new URLSearchParams(window.location.search)
+    var changed = []
+    var urlParams = params.forEach((v, k) => {
+      if (!configs.includes(k)) return;
+      try {
+        storage.set(k, JSON.parse(v))
+        changed.push(k)
+      } catch (error) {
+        console.error(error)
+      }
+    })
+    if (changed.length > 0) {
+      changed.forEach((k) => params.delete(k))
+      const url = window.location.toString().replace(window.location.search, params.toString())
+      console.log('settings changed:', changed, 'redirect to:', url)
+      window.location.assign(url)
+    }
+
     this.handleInstallPrompt = this.handleInstallPrompt.bind(this);
     this.handleFocusAndBlur = this.handleFocusAndBlur.bind(this);
   }
@@ -98,6 +122,9 @@ export class App extends React.Component {
 
     if (allow_reporting) {
       ReactGA.initialize('UA-64701652-3');
+      Sentry.init({
+        dsn: 'https://ca99fb6662fe40ae8ec4c18a466e4b4b@o99789.ingest.sentry.io/219026',
+      });
     }
 
     // Fire up our services
@@ -113,35 +140,35 @@ export class App extends React.Component {
     }
   }
 
-  componentDidUpdate(prevProps) {
+  componentDidUpdate({
+    location: prevLocation,
+  }) {
+    const {
+      location = {},
+      allow_reporting,
+      uiActions,
+      context_menu,
+    } = this.props;
+
     // When we have navigated to a new route
-    if (this.props.location !== prevProps.location) {
+    if (location !== prevLocation) {
       // Log our pageview
-      if (this.props.allow_reporting) {
-        ReactGA.set({ page: this.props.location.pathname });
-        ReactGA.pageview(this.props.location.pathname);
+      if (allow_reporting) {
+        ReactGA.set({ page: location.pathname });
+        ReactGA.pageview(location.pathname);
       }
 
       // If the location has a "scroll_position" state variable, scroll to it.
       // This is invisibly injected to the history by the Link component when navigating, so
       // hitting back in the browser allows us to restore the position
-      const location_state = this.props.location.state
-        ? this.props.location.state
-        : {};
+      const location_state = location.state || {};
       if (location_state.scroll_position) {
         scrollTo(parseInt(location_state.scroll_position), false);
       }
 
-      // Hide our sidebar
-      this.props.uiActions.toggleSidebar(false);
-
-      // Unselect any tracks
-      this.props.uiActions.setSelectedTracks([]);
-
-      // Close context menu
-      if (this.props.context_menu) {
-        this.props.uiActions.hideContextMenu();
-      }
+      uiActions.toggleSidebar(false);
+      uiActions.setSelectedTracks([]);
+      if (context_menu) uiActions.hideContextMenu();
     }
   }
 
@@ -154,14 +181,16 @@ export class App extends React.Component {
    *
    * @param e Event
    * */
-  handleFocusAndBlur(e) {
-    this.props.uiActions.setWindowFocus(document.hasFocus());
+  handleFocusAndBlur() {
+    const { uiActions: { setWindowFocus } } = this.props;
+    setWindowFocus(document.hasFocus());
   }
 
   handleInstallPrompt(e) {
+    const { uiActions: { installPrompt } } = this.props;
     e.preventDefault();
     console.log('Install prompt detected');
-    this.props.uiActions.installPrompt(e);
+    installPrompt(e);
   }
 
   render() {
@@ -328,6 +357,7 @@ export class App extends React.Component {
         <ContextMenu />
         <Dragger />
         <Notifications />
+        <Stream />
 
         {this.props.debug_info ? <DebugInfo /> : null}
       </div>
